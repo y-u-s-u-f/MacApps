@@ -68,7 +68,7 @@ async def lock(interaction: discord.Interaction, reason:str=None):
     await interaction.response.defer(ephemeral=False)
     view = Confirm()
     if interaction.user == interaction.channel.owner or interaction.permissions.manage_threads:
-        em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, timestamp=datetime.datetime.utcnow(),color=discord.Color.green())
+        em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, timestamp=datetime.datetime.utcnow(), footer=f"Locked by {interaction.user}", avatar_url=interaction.user.avatar.url,color=discord.Color.green())
         await interaction.followup.send(embed=em)
         await interaction.channel.edit(name=
                                    '[🔒] ' + interaction.channel.name,
@@ -99,7 +99,7 @@ async def lock(interaction: discord.Interaction, reason:str=None):
 async def unlock(interaction: discord.Interaction, thread: str=None, reason:str=None):
     await interaction.response.defer(ephemeral=False)
     if thread is None and isinstance(interaction.channel, discord.Thread):
-        thread = interaction.channel
+        thread = interaction.channel.id
     if not thread:
         await interaction.followup.send(embed=discord.Embed(title='❌ Failed', description='Please either use this command in a thread and/or specify the thread ID/link.', color=discord.Color.red()), ephemeral=True)
         return
