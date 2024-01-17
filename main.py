@@ -68,7 +68,7 @@ async def lock(interaction: discord.Interaction, reason:str=None):
     await interaction.response.defer(ephemeral=False)
     view = Confirm()
     if interaction.user == interaction.channel.owner or interaction.permissions.manage_threads:
-        em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, color=discord.Color.green())
+        em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, timestamp=datetime.datetime.utcnow(),color=discord.Color.green())
         await interaction.followup.send(embed=em)
         await interaction.channel.edit(name=
                                    '[🔒] ' + interaction.channel.name,
