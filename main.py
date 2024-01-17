@@ -81,7 +81,7 @@ async def lock(interaction: discord.Interaction, reason:str=None):
       # Wait for the View to stop listening for input...
       await view.wait()
       if view.value:
-        em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, color=discord.Color.green())
+        em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, timestamp=datetime.datetime.utcnow(), color=discord.Color.green())
         await interaction.followup.send(embed=em)
         await interaction.channel.edit(name=
                                    '[🔒] ' + interaction.channel.name,
@@ -122,6 +122,33 @@ async def unlock(interaction: discord.Interaction, thread: str=None, reason:str=
         footer=f"Unlocked by {interaction.user.name}",
         color=discord.Color.green()
     ))
+
+# create the modal for partnering
+class PartnerModal(discord.ui.Modal, title='Partner with us!'):
+    app_name = discord.ui.TextInput(label='App Name(s)', placeholder='Your app name(s)', style=discord.TextStyle.short, required=True)
+    app_desc = discord.ui.TextInput(label='Long App Description(s)', placeholder='Your app description(s)', style=discord.TextStyle.long, required=False)
+    app_link = discord.ui.TextInput(label='App Link(s)', placeholder='Your app link(s)', required=True)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed=discord.Embed(title='New Partner Application!', description=f'{interaction.user.mention} has submitted an application!', timestamp=datetime.datetime.utcnow(), color=discord.Color.green())
+        embed.add_field(name='App Name(s)', value=self.app_name.value, inline=False)
+        embed.add_field(name='App Description(s)', value=self.app_desc.value, inline=False)
+        embed.add_field(name='App Link(s)', value=self.app_link.value, inline=False)
+        await bot.get_channel(1017835578370310187).send(embed=embed)
+        embed=discord.Embed(title='Your application has been submitted!', description='We will get back to you soon!', color=discord.Color.green())
+        embed.add_field(name='App Name(s)', value=self.app_name.value, inline=False)
+        embed.add_field(name='App Description(s)', value=self.app_desc.value, inline=False)
+        embed.add_field(name='App Link(s)', value=self.app_link.value, inline=False)
+
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+@tree.command(name='partner', description='Submit your app(s) to partner with our server')
+async def partner(interaction: discord.Interaction):
+    # open the partner modal
+    await interaction.response.send_modal(PartnerModal())
+
+
 
 
 
