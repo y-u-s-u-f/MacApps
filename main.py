@@ -1,11 +1,25 @@
 import discord
 import re
+import datetime
+import os
 from discord.ext import commands
 from discord import app_commands
+from dotenv import load_dotenv
+
+load_dotenv()
 
 bot = discord.Client(intents=discord.Intents.all())
 tree = app_commands.CommandTree(bot)
 
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user} in {len(bot.guilds)} servers!')
+    await tree.sync()
+
+@tree.command(name='ping', description="Sends the bot's latency")
+async def ping(interaction: discord.Interaction):
+  embed = discord.Embed(title=f"Pong! {round(bot.latency * 1000)}ms")
+  await interaction.response.send_message(embed=embed, color=discord.Color.green())
 
 
 class Confirm(discord.ui.View):
@@ -35,7 +49,7 @@ class Confirm(discord.ui.View):
         if interaction.user != interaction.channel.owner:
             await interaction.response.send_message(embed=discord.Embed(title='❌ You are not the owner of this thread.', color=discord.Color.red()), ephemeral=True)
             return
-        await interaction.response.send_message(embed=discord.Embed(title='Cancelling...'))
+        await interaction.response.send_message(embed=discord.Embed(title='Cancelling...', color=discord.Color.yellow()))
         button.disabled = True
         self.children[0].disabled = True
         await interaction.message.edit(view=self)
@@ -79,19 +93,6 @@ async def lock(interaction: discord.Interaction, reason:str=None):
 
 
 
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user} in {len(bot.guilds)} servers!')
-    await tree.sync()
-
-@tree.command(name='ping', description="Sends the bot's latency")
-async def ping(interaction: discord.Interaction):
-  embed = discord.Embed(title=f"Pong! {round(bot.latency * 1000)}ms")
-  await interaction.response.send_message(embed=embed, color=discord.Color.green())
-
-
-    
-
   
 @tree.command(name='unlock', description='Unlocks the thread')
 @app_commands.describe(thread='The ID or link of the thread to unlock', reason='The reason for unlocking the thread')
@@ -114,9 +115,16 @@ async def unlock(interaction: discord.Interaction, thread: str=None, reason:str=
         return
     await interaction.followup.send(embed=discord.Embed(title="🔓 Unlocked!", description=f"Reason: {reason}" if reason else None, color=discord.Color.green()))
     await thread.edit(name=thread.name.replace('[🔒] ', ''), locked=False, archived=False, reason=reason or None)
+    await thread.send(embed=discord.Embed(
+        title="This thread has been unlocked!",
+        description=f"Reason: {reason}" if reason else None,
+        timestamp=datetime.datetime.utcnow(),
+        footer=f"Unlocked by {interaction.user.name}",
+        color=discord.Color.green()
+    ))
 
 
 
 
 
-bot.run('MTE5NjQ3MjY3MjA4Nzk3ODE0Ng.Ges1yQ.RXRJLiB6JFsD5C_paNnaLvrDIfeqiL1RfM7v68')
+bot.run(os.getenv('TOKEN'))
