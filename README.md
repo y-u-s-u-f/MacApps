@@ -5,5 +5,6 @@
 
 
 ### Todo List:
-[] Add alternative to command
-[] Add app sales command
+- [ ] Add alternative to command
+- [ ] Add app sales command
+- [x] Add partner command
