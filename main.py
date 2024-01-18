@@ -27,9 +27,6 @@ class Confirm(discord.ui.View):
         super().__init__()
         self.value = None
 
-    # When the confirm button is pressed, set the inner value to `True` and
-    # stop the View from listening to more input.
-    # We also send the user an ephemeral message that we're confirming their choice.
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green, emoji='✅')
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != interaction.channel.owner:
@@ -43,7 +40,6 @@ class Confirm(discord.ui.View):
         self.value = True
         self.stop()
 
-    # This one is similar to the confirmation button except sets the inner value to `False`
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey, emoji='❌')
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user != interaction.channel.owner:
@@ -60,7 +56,8 @@ class Confirm(discord.ui.View):
 async def lock_thread(interaction: discord.Interaction, reason:str=None):
     em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, timestamp=datetime.datetime.now(), color=discord.Color.green())
     em.set_footer(text=f'Locked by {interaction.user.name}', icon_url=interaction.user.avatar.url)
-    await interaction.followup.send(embed=em)
+    await interaction.followup.send(embed=discord.Embed(title="Locking...", color=discord.Color.green()), ephemeral=True)
+    await interaction.channel.send(embed=em)
     await interaction.channel.edit(name=
                                 '[🔒] ' + interaction.channel.name,
                                 locked=True,
@@ -68,7 +65,7 @@ async def lock_thread(interaction: discord.Interaction, reason:str=None):
                                 reason=reason if reason else None)
 
 async def unlock_thread(interaction: discord.Interaction, thread: discord.Thread, reason:str=None):
-    await interaction.followup.send(embed=discord.Embed(title="🔓 Unlocked!", description=f"Reason: {reason}" if reason else None, color=discord.Color.green()))
+    await interaction.followup.send(embed=discord.Embed(title="🔓 Unlocked!", description=f"Reason: {reason}" if reason else None, color=discord.Color.green()), ephemeral=True)
     await thread.edit(name=thread.name.replace('[🔒] ', ''), locked=False, archived=False, reason=reason or None)
     embed=discord.Embed(
         title="This thread has been unlocked!",
@@ -83,7 +80,7 @@ async def unlock_thread(interaction: discord.Interaction, thread: discord.Thread
 @tree.command(name='lock', description='Locks the thread')
 @app_commands.describe(reason='The reason for locking the thread')
 async def lock(interaction: discord.Interaction, reason:str=None):
-    await interaction.response.defer(ephemeral=False)
+    await interaction.response.defer(ephemeral=True)
     if not isinstance(interaction.channel, discord.Thread):
        await interaction.response.send_message(embed=discord.Embed(title='❌ This command can only be used in threads.', color=discord.Color.red()), ephemeral=True)
        return
@@ -91,7 +88,7 @@ async def lock(interaction: discord.Interaction, reason:str=None):
     if interaction.user == interaction.channel.owner or interaction.permissions.manage_threads:
         await lock_thread(interaction, reason)
     else:
-      await interaction.followup.send(f'<@{interaction.channel.owner_id}>',embed=discord.Embed(title='Do you want to lock this thread?', color=discord.Color.green(), avatar_url=interaction.user.avatar.url).set_footer(f'{interaction.user.name} is requesting to lock this thread.'), view=view)
+      await interaction.channel.send(f'<@{interaction.channel.owner_id}>',embed=discord.Embed(title='Do you want to lock this thread?', color=discord.Color.green(), avatar_url=interaction.user.avatar.url).set_footer(f'{interaction.user.name} is requesting to lock this thread.'), view=view)
 
       await view.wait()
       if view.value:
@@ -109,7 +106,7 @@ async def unlock(interaction: discord.Interaction, thread: str=None, reason:str=
     if thread is None and isinstance(interaction.channel, discord.Thread):
         thread = interaction.channel.id
     if not thread:
-        await interaction.followup.send(embed=discord.Embed(title='❌ Failed', description='Please either use this command in a thread and/or specify the thread ID/link.', color=discord.Color.red()), ephemeral=True)
+        await interaction.followup.send(embed=discord.Embed(title='❌ Failed', description='Please either use this command in a thread and/or specify the thread ID/link.', color=discord.Color.red()))
         return
     if str(thread).isdigit():
         thread = await interaction.guild.fetch_channel(int(thread))
@@ -117,14 +114,14 @@ async def unlock(interaction: discord.Interaction, thread: str=None, reason:str=
         thread = await bot.fetch_channel(int(re.match(r'(https?:\/\/)?(ptb\.|canary\.)?discord(app)?\.(com|net)\/channels\/([0-9]+)\/([0-9]+)', thread).group(6)))
 
     if not isinstance(thread, discord.Thread):
-        await interaction.followup.send(embed=discord.Embed(title='❌ Failed', description='Not a thread!', color=discord.Color.red()), ephemeral=True)
+        await interaction.followup.send(embed=discord.Embed(title='❌ Failed', description='Not a thread!', color=discord.Color.red()))
         return
     if not thread.locked and not thread.archived:
-        await interaction.followup.send(embed=discord.Embed(title="❌ This thread is already unlocked!", color=discord.Color.red(), ephemeral=True))
+        await interaction.followup.send(embed=discord.Embed(title="❌ This thread is already unlocked!", color=discord.Color.red()))
         return
     await unlock_thread(interaction, thread, reason)
 
-# create the modal for partnering
+
 class PartnerModal(discord.ui.Modal, title='Partner with us!'):
     app_name = discord.ui.TextInput(label='App Name(s)', placeholder='Your app name(s)', style=discord.TextStyle.short, required=True)
     app_desc = discord.ui.TextInput(label='Long App Description(s)', placeholder='Your app description(s)', style=discord.TextStyle.long, required=False)
@@ -146,7 +143,7 @@ class PartnerModal(discord.ui.Modal, title='Partner with us!'):
 
 @tree.command(name='partner', description='Submit your app(s) to partner with our server')
 async def partner(interaction: discord.Interaction):
-    # open the partner modal
+
     await interaction.response.send_modal(PartnerModal())
 
 
