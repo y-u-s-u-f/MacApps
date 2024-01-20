@@ -26,8 +26,11 @@ async def ping(interaction: discord.Interaction):
 async def help(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(title='Help', description='Here is a list of all the commands:', color=discord.Color.blue())
-    for command in tree.commands:
-        embed.add_field(name=command.name, value=command.description, inline=False)
+    for command in tree.get_commands():
+        if not command.name == 'help':
+            embed.add_field(name=command.name, value=command.description, inline=False)
+        else:
+            embed.add_field(name=command.name, value="You're already here!", inline=False)
     await interaction.followup.send(embed=embed)
 
 
