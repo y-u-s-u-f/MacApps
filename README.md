@@ -7,4 +7,5 @@
 ### Todo List:
 - [ ] Add alternative to command
 - [ ] Add app sales command
+- [ ] Add modmail functionality
 - [x] Add partner command
