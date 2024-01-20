@@ -2,19 +2,50 @@ import discord
 import re
 import datetime
 import os
+import requests
+import json
+import asyncio
+from bs4 import BeautifulSoup
 from discord.ext import commands
 from discord import app_commands
 from dotenv import load_dotenv
+from discord.ext import tasks
 
 load_dotenv()
 
 bot = discord.Client(intents=discord.Intents.all())
 tree = app_commands.CommandTree(bot)
 
+
+
+@tasks.loop(hours=24)
+async def sendFreeApps():
+    webhook = discord.SyncWebhook.from_url(
+    f"https://discord.com/api/webhooks/1193700195322560543/1dvD02JlbTVS9Xxu0zpE3Ez2GUN95n_BVMDTC3v8vzJ7xAc1ULtNYTBSZpVMEo3NgB2e"
+    )
+    url = f'https://appadvice.com/apps-gone-free/{datetime.datetime.now().strftime("%Y-%m-%d")}'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    free_apps = soup.find_all('div', class_='aa_app__icon aa_bg aa_bg-888--1')
+    app_list = []
+
+    for app in free_apps:
+        app_name = app.find('img').get('alt')
+        app_list.append(app_name)
+
+    # Get only half of the list
+    half_length = len(app_list) // 2
+    app_list = app_list[:half_length]
+    freeAppsEm = discord.Embed(title='Apps Gone Free Today', description="\n".join(app_list), color=discord.Color.blurple())
+    freeAppsEm.set_footer(text=f'https://appadvice.com/apps-gone-free/', icon_url='https://media.licdn.com/dms/image/C560BAQGLpOtO6VB09Q/company-logo_200_200/0/1630663861224/appadvice_logo?e=2147483647&v=beta&t=wbZXD3hheDKs6TMWU3rINJCsFa0R5zufCLDlaN1tRwk')
+    await webhook.send(embed=freeAppsEm)
+
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user} in {len(bot.guilds)} servers!')
     await tree.sync()
+    sendFreeApps.start()
 
 @tree.command(name='ping', description="Sends the bot's latency")
 async def ping(interaction: discord.Interaction):
@@ -163,9 +194,6 @@ class PartnerModal(discord.ui.Modal, title='Partner with us!'):
 async def partner(interaction: discord.Interaction):
 
     await interaction.response.send_modal(PartnerModal())
-
-
-
 
 
 
