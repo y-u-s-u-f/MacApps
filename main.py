@@ -13,7 +13,7 @@ from discord.ext import tasks
 
 load_dotenv()
 
-bot = discord.Client(intents=discord.Intents.all())
+bot = discord.Client(intents=discord.Intents.all(), status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.playing, name='run /ticket to contact mods'))
 tree = app_commands.CommandTree(bot)
 
 
@@ -45,7 +45,6 @@ async def sendFreeApps():
 async def on_ready():
     print(f'Logged in as {bot.user} in {len(bot.guilds)} servers!')
     await tree.sync()
-    sendFreeApps.start()
 
 @tree.command(name='ping', description="Sends the bot's latency")
 async def ping(interaction: discord.Interaction):
@@ -142,7 +141,7 @@ async def lock(interaction: discord.Interaction, reason:str=None):
 
 
 
-  
+
 @tree.command(name='unlock', description='Unlocks the thread')
 @app_commands.describe(thread='The ID or link of the thread to unlock', reason='The reason for unlocking the thread')
 async def unlock(interaction: discord.Interaction, thread: str=None, reason:str=None):
@@ -179,13 +178,17 @@ class PartnerModal(discord.ui.Modal, title='Partner with us!'):
         embed.add_field(name='App Description(s)', value=self.app_desc.value, inline=False) if self.app_desc.value else None
         embed.add_field(name='App Link(s)', value=self.app_link.value, inline=False)
         embed.add_field(name='Notes', value=self.notes.value, inline=False) if self.notes.value else None
-        await bot.get_channel(1017835578370310187).send(embed=embed)
+        # Create a channel for that partner submission:
+        category = interaction.guild.get_channel(1188453953088786453)
+        channel = await category.create_text_channel(name=f'{interaction.user.name}-partner-application', topic=f'Partner application for {interaction.user.name}')
+        overwrite = channel.overwrites_for(interaction.user)
+        overwrite.update(send_messages=True, view_channel=True, read_message_history=True, read_messages=True)
+        await channel.set_permissions(interaction.user, overwrite=overwrite)
+        await channel.send(embed=embed)
 
-        embed=discord.Embed(title='Your application has been submitted!', description='We will get back to you soon!', color=discord.Color.green())
-        embed.add_field(name='App Name(s)', value=self.app_name.value, inline=False)
-        embed.add_field(name='App Description(s)', value=self.app_desc.value, inline=False) if self.app_desc.value else None
-        embed.add_field(name='App Link(s)', value=self.app_link.value, inline=False)
-        embed.add_field(name='Notes', value=self.notes.value, inline=False) if self.notes.value else None
+
+
+        embed=discord.Embed(title='Your application has been submitted!', description=f'We will contact you in {channel.mention}', color=discord.Color.green())
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
@@ -195,7 +198,23 @@ async def partner(interaction: discord.Interaction):
 
     await interaction.response.send_modal(PartnerModal())
 
+@tree.command(name='ticket', description='Creates a ticket')
+async def ticket(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    category = interaction.guild.get_channel(1188453953088786453)
+    ticket = await category.create_text_channel(name=f'{interaction.user.name}-ticket', topic=f'Ticket for {interaction.user.name}')
+    overwrite = ticket.overwrites_for(interaction.user)
+    overwrite.update(send_messages=True, view_channel=True, read_message_history=True, read_messages=True)
+    await ticket.set_permissions(interaction.user, overwrite=overwrite)
+    await ticket.send(embed=discord.Embed(title='Ticket Created!', description=f'You can now talk to our staff in {ticket.mention}', color=discord.Color.green()))
 
+@tree.command(name='close', description='Closes a ticket')
+async def close(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    if not interaction.channel.category_id == 1188453953088786453:
+        await interaction.followup.send(embed=discord.Embed(title='❌ Error', description='This command can only be used in tickets.', color=discord.Color.red()))
+        return
+    await interaction.channel.delete(reason=f'Closed by {interaction.user.name}')
 
 
 bot.run(os.getenv('TOKEN'))
