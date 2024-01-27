@@ -16,8 +16,8 @@ class bot(commands.Bot):
         )
     
     async def setup_hook(self):
-        await self.load_extension("cogs.moderation")
-        await self.load_extension("cogs.general")
+        for cog in cogs.__all__:
+            self.load_extension(f"cogs.{cog}")
 
 bot = bot()
 bot.run(os.getenv('TOKEN'))
