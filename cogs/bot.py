@@ -12,3 +12,8 @@ class General(commands.Cog):
     async def ping(self, interaction: discord.Interaction):
         embed = discord.Embed(title=f"Pong! {round(self.bot.latency * 1000)}ms")
         await interaction.response.send_message(embed=embed, color=discord.Color.green())
+
+
+
+def setup(bot):
+    bot.add_cog(General(bot))
