@@ -17,7 +17,7 @@ class bot(commands.Bot):
     
     async def setup_hook(self):
         await self.load_extension("cogs.moderation")
-        await self.load_extension("cogs.bot")
+        await self.load_extension("cogs.general")
 
 bot = bot()
 bot.run(os.getenv('TOKEN'))
