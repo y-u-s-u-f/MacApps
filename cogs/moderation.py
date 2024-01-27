@@ -145,7 +145,7 @@ class Moderation(commands.Cog):
         await interaction.followup.send(embed=discord.Embed(title='Synced!', color=discord.Color.green()))
 
     @app_commands.command(name='close', description='Closes a ticket')
-    async def close(interaction: discord.Interaction):
+    async def close(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=False)
         if not interaction.channel.category_id == 1188453953088786453:
             await interaction.followup.send(embed=discord.Embed(title='❌ Error', description='This command can only be used in tickets.', color=discord.Color.red()))
