@@ -1,15 +1,10 @@
 import discord
 import re
-import datetime
 import os
-import requests
-import json
-import asyncio
-from bs4 import BeautifulSoup
 from discord.ext import commands
 from discord import app_commands
 from dotenv import load_dotenv
-from discord.ext import tasks
+import datetime
 
 load_dotenv()
 
@@ -18,33 +13,10 @@ tree = app_commands.CommandTree(bot)
 
 
 
-@tasks.loop(hours=24)
-async def sendFreeApps():
-    webhook = discord.SyncWebhook.from_url(
-    f"https://discord.com/api/webhooks/1193700195322560543/1dvD02JlbTVS9Xxu0zpE3Ez2GUN95n_BVMDTC3v8vzJ7xAc1ULtNYTBSZpVMEo3NgB2e"
-    )
-    url = f'https://appadvice.com/apps-gone-free/{datetime.datetime.now().strftime("%Y-%m-%d")}'
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    free_apps = soup.find_all('div', class_='aa_app__icon aa_bg aa_bg-888--1')
-    app_list = []
-
-    for app in free_apps:
-        app_name = app.find('img').get('alt')
-        app_list.append(app_name)
-
-    # Get only half of the list
-    half_length = len(app_list) // 2
-    app_list = app_list[:half_length]
-    freeAppsEm = discord.Embed(title='Apps Gone Free Today', description="\n".join(app_list), color=discord.Color.blurple())
-    freeAppsEm.set_footer(text=f'https://appadvice.com/apps-gone-free/', icon_url='https://media.licdn.com/dms/image/C560BAQGLpOtO6VB09Q/company-logo_200_200/0/1630663861224/appadvice_logo?e=2147483647&v=beta&t=wbZXD3hheDKs6TMWU3rINJCsFa0R5zufCLDlaN1tRwk')
-    await webhook.send(embed=freeAppsEm)
 
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user} in {len(bot.guilds)} servers!')
-    await tree.sync()
 
 @tree.command(name='ping', description="Sends the bot's latency")
 async def ping(interaction: discord.Interaction):
@@ -69,37 +41,63 @@ class Confirm(discord.ui.View):
     def __init__(self):
         super().__init__()
         self.value = None
+        self.interaction = None
 
     @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green, emoji='✅')
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user != interaction.channel.owner:
-            await interaction.response.send_message(embed=discord.Embed(title='❌ You are not the owner of this thread.', color=discord.Color.red()), ephemeral=True)
-            return
         await interaction.response.send_message(embed=discord.Embed(title='Confirming...', color=discord.Color.green()))
         button.disabled = True
         self.children[1].disabled = True
         await interaction.message.edit(view=self)
-
+        self.interaction = interaction
         self.value = True
         self.stop()
 
     @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey, emoji='❌')
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if interaction.user != interaction.channel.owner:
-            await interaction.response.send_message(embed=discord.Embed(title='❌ You are not the owner of this thread.', color=discord.Color.red()), ephemeral=True)
-            return
         await interaction.response.send_message(embed=discord.Embed(title='Cancelling...', color=discord.Color.yellow()))
         button.disabled = True
         self.children[0].disabled = True
         await interaction.message.edit(view=self)
-
+        self.interaction = interaction
         self.value = False
         self.stop()
 
-async def lock_thread(interaction: discord.Interaction, reason:str=None):
+
+
+
+
+    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey, emoji='❌')
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        button.disabled = True
+        self.children[0].disabled = True
+        await interaction.message.edit(view=self)
+        self.interaction = interaction
+        self.value = False
+        self.stop()
+
+@tree.command(name='close', description='Closes a ticket')
+async def close(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=False)
+    if not interaction.channel.category_id == 1188453953088786453:
+        await interaction.followup.send(embed=discord.Embed(title='❌ Error', description='This command can only be used in tickets.', color=discord.Color.red()))
+        return
+
+    view = Confirm()
+    view.interaction = interaction  # Set the interaction attribute here
+    await interaction.followup.send(embed=discord.Embed(title='Are you sure you want to close this ticket?', description='This action can not be undone.', color=discord.Color.yellow()), view=view)
+    await view.wait()
+
+    if view.value:
+        await interaction.channel.delete(reason=f'Closed by {interaction.user.name}')
+    else:
+        await interaction.followup.send(embed=discord.Embed(title='❌ Canceled', description='Ticket closure cancelled.', timestamp=datetime.datetime.now(), color=discord.Color.red()).set_footer(text=f'Canceled by {view.interaction.user}', icon_url=view.interaction.user.avatar.url))
+
+
+async def lock_thread(interaction: discord.Interaction, reason:str=None, followup:bool=True):
     em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, timestamp=datetime.datetime.now(), color=discord.Color.green())
     em.set_footer(text=f'Locked by {interaction.user.name}', icon_url=interaction.user.avatar.url)
-    await interaction.followup.send(embed=discord.Embed(title="Locking...", color=discord.Color.green()), ephemeral=True)
+    await interaction.followup.send(embed=discord.Embed(title="Locking...", color=discord.Color.green()), ephemeral=True) if followup else await interaction.response.send_message(embed=discord.Embed(title="Locking...", color=discord.Color.green()), ephemeral=True)
     await interaction.channel.send(embed=em)
     await interaction.channel.edit(name=
                                 '[🔒] ' + interaction.channel.name,
@@ -122,22 +120,22 @@ async def unlock_thread(interaction: discord.Interaction, thread: discord.Thread
 
 @tree.command(name='lock', description='Locks the thread')
 @app_commands.describe(reason='The reason for locking the thread')
-async def lock(interaction: discord.Interaction, reason:str=None):
+async def lock(interaction: discord.Interaction, reason: str = None):
     await interaction.response.defer(ephemeral=True)
     if not isinstance(interaction.channel, discord.Thread):
-       await interaction.response.send_message(embed=discord.Embed(title='❌ This command can only be used in threads.', color=discord.Color.red()), ephemeral=True)
-       return
+        await interaction.followup.send(embed=discord.Embed(title='❌ This command can only be used in threads.', color=discord.Color.red()), ephemeral=True)
+        return
     view = Confirm()
     if interaction.user == interaction.channel.owner or interaction.permissions.manage_threads:
         await lock_thread(interaction, reason)
     else:
-      await interaction.channel.send(f'<@{interaction.channel.owner_id}>',embed=discord.Embed(title='Do you want to lock this thread?', color=discord.Color.green(), avatar_url=interaction.user.avatar.url).set_footer(f'{interaction.user.name} is requesting to lock this thread.'), view=view)
+        await interaction.channel.send(f'<@{interaction.channel.owner_id}>',embed=discord.Embed(title='Do you want to lock this thread?', color=discord.Color.green()).set_footer(text=f'{interaction.user.name} is requesting to lock this thread.', icon_url=interaction.user.avatar.url), view=view)
 
-      await view.wait()
-      if view.value:
-        await lock_thread(interaction, reason)
-      else:
-          await interaction.followup.send(embed=discord.Embed(title="❌ Cancelled", color=discord.Color.red()))
+        await view.wait()
+        if view.value:
+            await lock_thread(view.interaction, reason)
+        else:
+            await interaction.followup.send(embed=discord.Embed(title="❌ Cancelled", color=discord.Color.red()))
 
 
 
@@ -206,15 +204,19 @@ async def ticket(interaction: discord.Interaction):
     overwrite = ticket.overwrites_for(interaction.user)
     overwrite.update(send_messages=True, view_channel=True, read_message_history=True, read_messages=True)
     await ticket.set_permissions(interaction.user, overwrite=overwrite)
-    await ticket.send(embed=discord.Embed(title='Ticket Created!', description=f'You can now talk to our staff in {ticket.mention}', color=discord.Color.green()))
+    await interaction.followup.send(embed=discord.Embed(title='Ticket Created!', description=f'You can now talk to our staff in {ticket.mention}', color=discord.Color.green()))
+    await ticket.send(embed=discord.Embed(title='Ticket Created!', description=f'{interaction.user.mention} created a ticket!', color=discord.Color.green()))
 
-@tree.command(name='close', description='Closes a ticket')
-async def close(interaction: discord.Interaction):
+
+
+
+
+
+@tree.command(name='sync', description='Syncs the slash commands')
+@commands.is_owner()
+async def sync(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    if not interaction.channel.category_id == 1188453953088786453:
-        await interaction.followup.send(embed=discord.Embed(title='❌ Error', description='This command can only be used in tickets.', color=discord.Color.red()))
-        return
-    await interaction.channel.delete(reason=f'Closed by {interaction.user.name}')
-
+    await tree.sync()
+    await interaction.followup.send(embed=discord.Embed(title='✅ Synced!', color=discord.Color.green(), timestamp=datetime.datetime.now()))
 
 bot.run(os.getenv('TOKEN'))
