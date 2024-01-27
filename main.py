@@ -1,222 +1,23 @@
 import discord
-import re
 import os
 from discord.ext import commands
-from discord import app_commands
 from dotenv import load_dotenv
-import datetime
+import cogs
 
 load_dotenv()
 
-bot = discord.Client(intents=discord.Intents.all(), status=discord.Status.online, activity=discord.Activity(type=discord.ActivityType.playing, name='run /ticket to contact mods'))
-tree = app_commands.CommandTree(bot)
 
-
-
-
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user} in {len(bot.guilds)} servers!')
-
-@tree.command(name='ping', description="Sends the bot's latency")
-async def ping(interaction: discord.Interaction):
-  embed = discord.Embed(title=f"Pong! {round(bot.latency * 1000)}ms")
-  await interaction.response.send_message(embed=embed, color=discord.Color.green())
-
-
-@tree.command(name='help', description='Shows a list of all the commands')
-async def help(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    embed = discord.Embed(title='Help', description='Here is a list of all the commands:', color=discord.Color.blue())
-    for command in tree.get_commands():
-        if not command.name == 'help':
-            embed.add_field(name=command.name, value=command.description, inline=False)
-        else:
-            embed.add_field(name=command.name, value="You're already here!", inline=False)
-    await interaction.followup.send(embed=embed)
-
-
-
-class Confirm(discord.ui.View):
+class bot(commands.Bot):
     def __init__(self):
-        super().__init__()
-        self.value = None
-        self.interaction = None
+        super().__init__(
+            command_prefix="!",
+            intents=discord.Intents.all(),
+            activity=discord.Activity(type=discord.ActivityType.playing, name='run /ticket to contact mods')
+        )
+    
+    async def setup_hook(self):
+        await self.load_extension("cogs.moderation")
+        await self.load_extension("cogs.bot")
 
-    @discord.ui.button(label='Confirm', style=discord.ButtonStyle.green, emoji='✅')
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(embed=discord.Embed(title='Confirming...', color=discord.Color.green()))
-        button.disabled = True
-        self.children[1].disabled = True
-        await interaction.message.edit(view=self)
-        self.interaction = interaction
-        self.value = True
-        self.stop()
-
-    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey, emoji='❌')
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message(embed=discord.Embed(title='Cancelling...', color=discord.Color.yellow()))
-        button.disabled = True
-        self.children[0].disabled = True
-        await interaction.message.edit(view=self)
-        self.interaction = interaction
-        self.value = False
-        self.stop()
-
-
-
-
-
-    @discord.ui.button(label='Cancel', style=discord.ButtonStyle.grey, emoji='❌')
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        button.disabled = True
-        self.children[0].disabled = True
-        await interaction.message.edit(view=self)
-        self.interaction = interaction
-        self.value = False
-        self.stop()
-
-@tree.command(name='close', description='Closes a ticket')
-async def close(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=False)
-    if not interaction.channel.category_id == 1188453953088786453:
-        await interaction.followup.send(embed=discord.Embed(title='❌ Error', description='This command can only be used in tickets.', color=discord.Color.red()))
-        return
-
-    view = Confirm()
-    view.interaction = interaction  # Set the interaction attribute here
-    await interaction.followup.send(embed=discord.Embed(title='Are you sure you want to close this ticket?', description='This action can not be undone.', color=discord.Color.yellow()), view=view)
-    await view.wait()
-
-    if view.value:
-        await interaction.channel.delete(reason=f'Closed by {interaction.user.name}')
-    else:
-        await interaction.followup.send(embed=discord.Embed(title='❌ Canceled', description='Ticket closure cancelled.', timestamp=datetime.datetime.now(), color=discord.Color.red()).set_footer(text=f'Canceled by {view.interaction.user}', icon_url=view.interaction.user.avatar.url))
-
-
-async def lock_thread(interaction: discord.Interaction, reason:str=None, followup:bool=True):
-    em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, timestamp=datetime.datetime.now(), color=discord.Color.green())
-    em.set_footer(text=f'Locked by {interaction.user.name}', icon_url=interaction.user.avatar.url)
-    await interaction.followup.send(embed=discord.Embed(title="Locking...", color=discord.Color.green()), ephemeral=True) if followup else await interaction.response.send_message(embed=discord.Embed(title="Locking...", color=discord.Color.green()), ephemeral=True)
-    await interaction.channel.send(embed=em)
-    await interaction.channel.edit(name=
-                                '[🔒] ' + interaction.channel.name,
-                                locked=True,
-                                archived=True, 
-                                reason=reason if reason else None)
-
-async def unlock_thread(interaction: discord.Interaction, thread: discord.Thread, reason:str=None):
-    await interaction.followup.send(embed=discord.Embed(title="🔓 Unlocked!", description=f"Reason: {reason}" if reason else None, color=discord.Color.green()), ephemeral=True)
-    await thread.edit(name=thread.name.replace('[🔒] ', ''), locked=False, archived=False, reason=reason or None)
-    embed=discord.Embed(
-        title="This thread has been unlocked!",
-        description=f"Reason: {reason}" if reason else None,
-        timestamp=datetime.datetime.now(),
-        color=discord.Color.green()
-    )
-    embed.set_footer(text=f"Unlocked by {interaction.user.name}", icon_url=interaction.user.avatar.url)
-    await thread.send(embed=embed)
-
-
-@tree.command(name='lock', description='Locks the thread')
-@app_commands.describe(reason='The reason for locking the thread')
-async def lock(interaction: discord.Interaction, reason: str = None):
-    await interaction.response.defer(ephemeral=True)
-    if not isinstance(interaction.channel, discord.Thread):
-        await interaction.followup.send(embed=discord.Embed(title='❌ This command can only be used in threads.', color=discord.Color.red()), ephemeral=True)
-        return
-    view = Confirm()
-    if interaction.user == interaction.channel.owner or interaction.permissions.manage_threads:
-        await lock_thread(interaction, reason)
-    else:
-        await interaction.channel.send(f'<@{interaction.channel.owner_id}>',embed=discord.Embed(title='Do you want to lock this thread?', color=discord.Color.green()).set_footer(text=f'{interaction.user.name} is requesting to lock this thread.', icon_url=interaction.user.avatar.url), view=view)
-
-        await view.wait()
-        if view.value:
-            await lock_thread(view.interaction, reason)
-        else:
-            await interaction.followup.send(embed=discord.Embed(title="❌ Cancelled", color=discord.Color.red()))
-
-
-
-
-@tree.command(name='unlock', description='Unlocks the thread')
-@app_commands.describe(thread='The ID or link of the thread to unlock', reason='The reason for unlocking the thread')
-async def unlock(interaction: discord.Interaction, thread: str=None, reason:str=None):
-    await interaction.response.defer(ephemeral=False)
-    if thread is None and isinstance(interaction.channel, discord.Thread):
-        thread = interaction.channel.id
-    if not thread:
-        await interaction.followup.send(embed=discord.Embed(title='❌ Failed', description='Please either use this command in a thread and/or specify the thread ID/link.', color=discord.Color.red()))
-        return
-    if str(thread).isdigit():
-        thread = await interaction.guild.fetch_channel(int(thread))
-    elif re.match(r'(https?:\/\/)?(ptb\.|canary\.)?discord(app)?\.(com|net)\/channels\/([0-9]+)\/([0-9]+)', thread):
-        thread = await bot.fetch_channel(int(re.match(r'(https?:\/\/)?(ptb\.|canary\.)?discord(app)?\.(com|net)\/channels\/([0-9]+)\/([0-9]+)', thread).group(6)))
-
-    if not isinstance(thread, discord.Thread):
-        await interaction.followup.send(embed=discord.Embed(title='❌ Failed', description='Not a thread!', color=discord.Color.red()))
-        return
-    if not thread.locked and not thread.archived:
-        await interaction.followup.send(embed=discord.Embed(title="❌ This thread is already unlocked!", color=discord.Color.red()))
-        return
-    await unlock_thread(interaction, thread, reason)
-
-
-class PartnerModal(discord.ui.Modal, title='Partner with us!'):
-    app_name = discord.ui.TextInput(label='App Name(s)', placeholder='Your app name(s)', style=discord.TextStyle.short, required=True)
-    app_desc = discord.ui.TextInput(label='Long App Description(s)', placeholder='Your app description(s)', style=discord.TextStyle.long, required=False)
-    app_link = discord.ui.TextInput(label='App Link(s)', placeholder='Your app link(s)', required=True)
-    notes = discord.ui.TextInput(label='Notes', placeholder='Any additional information you would like to provide', style=discord.TextStyle.long, required=False)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        embed=discord.Embed(title='New Partner Application!', description=f'{interaction.user.mention} has submitted an application!', timestamp=datetime.datetime.now(), color=discord.Color.green())
-        embed.set_footer(text=f'Submitted by {interaction.user.name}', icon_url=interaction.user.avatar.url)
-        embed.add_field(name='App Name(s)', value=self.app_name.value, inline=False)
-        embed.add_field(name='App Description(s)', value=self.app_desc.value, inline=False) if self.app_desc.value else None
-        embed.add_field(name='App Link(s)', value=self.app_link.value, inline=False)
-        embed.add_field(name='Notes', value=self.notes.value, inline=False) if self.notes.value else None
-        # Create a channel for that partner submission:
-        category = interaction.guild.get_channel(1188453953088786453)
-        channel = await category.create_text_channel(name=f'{interaction.user.name}-partner-application', topic=f'Partner application for {interaction.user.name}')
-        overwrite = channel.overwrites_for(interaction.user)
-        overwrite.update(send_messages=True, view_channel=True, read_message_history=True, read_messages=True)
-        await channel.set_permissions(interaction.user, overwrite=overwrite)
-        await channel.send(embed=embed)
-
-
-
-        embed=discord.Embed(title='Your application has been submitted!', description=f'We will contact you in {channel.mention}', color=discord.Color.green())
-        await interaction.response.send_message(embed=embed, ephemeral=True)
-
-
-
-@tree.command(name='partner', description='Submit your app(s) to partner with our server')
-async def partner(interaction: discord.Interaction):
-
-    await interaction.response.send_modal(PartnerModal())
-
-@tree.command(name='ticket', description='Creates a ticket')
-async def ticket(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    category = interaction.guild.get_channel(1188453953088786453)
-    ticket = await category.create_text_channel(name=f'{interaction.user.name}-ticket', topic=f'Ticket for {interaction.user.name}')
-    overwrite = ticket.overwrites_for(interaction.user)
-    overwrite.update(send_messages=True, view_channel=True, read_message_history=True, read_messages=True)
-    await ticket.set_permissions(interaction.user, overwrite=overwrite)
-    await interaction.followup.send(embed=discord.Embed(title='Ticket Created!', description=f'You can now talk to our staff in {ticket.mention}', color=discord.Color.green()))
-    await ticket.send(embed=discord.Embed(title='Ticket Created!', description=f'{interaction.user.mention} created a ticket!', color=discord.Color.green()))
-
-
-
-
-
-
-@tree.command(name='sync', description='Syncs the slash commands')
-@commands.is_owner()
-async def sync(interaction: discord.Interaction):
-    await interaction.response.defer(ephemeral=True)
-    await tree.sync()
-    await interaction.followup.send(embed=discord.Embed(title='✅ Synced!', color=discord.Color.green(), timestamp=datetime.datetime.now()))
-
+bot = bot()
 bot.run(os.getenv('TOKEN'))
