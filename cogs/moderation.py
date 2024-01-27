@@ -3,7 +3,7 @@ import datetime
 import re
 from discord.ext import commands
 from discord import app_commands
-
+from typing import Literal
 
 class PartnerModal(discord.ui.Modal, title='Partner with us!'):
     app_name = discord.ui.TextInput(label='App Name(s)', placeholder='Your app name(s)', style=discord.TextStyle.short, required=True)
@@ -141,7 +141,7 @@ class Moderation(commands.Cog):
     @commands.is_owner()
     async def sync(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        await self.bot.sync_commands()
+        await self.bot.tree.sync()
         await interaction.followup.send(embed=discord.Embed(title='Synced!', color=discord.Color.green()))
 
     @app_commands.command(name='close', description='Closes a ticket')
@@ -163,6 +163,15 @@ class Moderation(commands.Cog):
     async def partner(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         await interaction.response.send_modal(view=PartnerModal())
+    @app_commands.command(name='reload', description="Reload a cog")
+    @commands.is_owner()
+    async def reload(self, interaction: discord.Interaction, cog: Literal["moderation", "general"]):
+        await interaction.response.defer(ephemeral=True)
+        if cog == "moderation":
+            await self.bot.reload_extension("cogs.moderation")
+        elif cog == "general":
+            await self.bot.reload_extension("cogs.general")
+        await interaction.followup.send(embed=discord.Embed(title='Reloaded!', color=discord.Color.green()))
     @commands.Cog.listener()
     async def on_ready(self):
         print('Moderation cog loaded')
