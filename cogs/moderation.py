@@ -107,7 +107,7 @@ class Moderation(commands.Cog):
     @app_commands.command(name='unlock', description='Unlocks a thread')
     @app_commands.describe(thread='The ID or link of the thread to unlock', reason='The reason for unlocking the thread')
     async def unlock(self, interaction: discord.Interaction, thread: str=None, reason:str=None):
-        await interaction.response.defer(ephemeral=False)
+        await interaction.response.defer(ephemeral=True)
         if thread is None and isinstance(interaction.channel, discord.Thread):
             thread = interaction.channel.id
         if not thread:
