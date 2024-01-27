@@ -13,6 +13,10 @@ class General(commands.Cog):
         embed = discord.Embed(title=f"Pong! {round(self.bot.latency * 1000)}ms")
         await interaction.response.send_message(embed=embed, color=discord.Color.green())
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        print('General cog loaded')
+
 
 
 async def setup(bot):
