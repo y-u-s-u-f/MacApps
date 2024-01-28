@@ -68,6 +68,9 @@ class Moderation(commands.Cog):
         if not isinstance(interaction.channel, discord.Thread):
             await interaction.followup.send(embed=discord.Embed(title='❌ This command can only be used in threads.', color=discord.Color.red()), ephemeral=True)
             return
+        if interaction.channel.locked and interaction.channel.archived:
+            await interaction.followup.send(embed=discord.Embed(title='❌ This thread is already!', color=discord.Color.red()), ephemeral=True)
+            return
         view = Confirm()
         if interaction.user == interaction.channel.owner or interaction.permissions.manage_threads:
             await lock_thread(interaction, reason)
