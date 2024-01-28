@@ -1,8 +1,10 @@
 import discord
+from discord import app_commands
 import os
 from discord.ext import commands
 from dotenv import load_dotenv
 import cogs
+from typing import Literal
 
 load_dotenv()
 
@@ -16,8 +18,9 @@ class bot(commands.Bot):
         )
     
     async def setup_hook(self):
-        for cog in cogs.__all__:
-            self.load_extension(f"cogs.{cog}")
+        await self.load_extension("cogs.moderation")
+        await self.load_extension("cogs.general")
+        await self.load_extension("cogs.partners")
 
 bot = bot()
 bot.run(os.getenv('TOKEN'))
