@@ -5,31 +5,7 @@ from discord.ext import commands
 from discord import app_commands
 from typing import Literal
 
-class PartnerModal(discord.ui.Modal, title='Partner with us!'):
-    app_name = discord.ui.TextInput(label='App Name(s)', placeholder='Your app name(s)', style=discord.TextStyle.short, required=True)
-    app_desc = discord.ui.TextInput(label='Long App Description(s)', placeholder='Your app description(s)', style=discord.TextStyle.long, required=False)
-    app_link = discord.ui.TextInput(label='App Link(s)', placeholder='Your app link(s)', required=True)
-    notes = discord.ui.TextInput(label='Notes', placeholder='Any additional information you would like to provide', style=discord.TextStyle.long, required=False)
 
-    async def on_submit(self, interaction: discord.Interaction):
-        embed=discord.Embed(title='New Partner Application!', description=f'{interaction.user.mention} has submitted an application!', timestamp=datetime.datetime.now(), color=discord.Color.green())
-        embed.set_footer(text=f'Submitted by {interaction.user.name}', icon_url=interaction.user.avatar.url)
-        embed.add_field(name='App Name(s)', value=self.app_name.value, inline=False)
-        embed.add_field(name='App Description(s)', value=self.app_desc.value, inline=False) if self.app_desc.value else None
-        embed.add_field(name='App Link(s)', value=self.app_link.value, inline=False)
-        embed.add_field(name='Notes', value=self.notes.value, inline=False) if self.notes.value else None
-        # Create a channel for that partner submission:
-        category = interaction.guild.get_channel(1188453953088786453)
-        channel = await category.create_text_channel(name=f'{interaction.user.name}-partner-application', topic=f'Partner application for {interaction.user.name}')
-        overwrite = channel.overwrites_for(interaction.user)
-        overwrite.update(send_messages=True, view_channel=True, read_message_history=True, read_messages=True)
-        await channel.set_permissions(interaction.user, overwrite=overwrite)
-        await channel.send(embed=embed)
-
-
-
-        embed=discord.Embed(title='Your application has been submitted!', description=f'We will contact you in {channel.mention}', color=discord.Color.green())
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 class Confirm(discord.ui.View):
     def __init__(self):
@@ -159,18 +135,12 @@ class Moderation(commands.Cog):
             await interaction.channel.delete(reason=f'Closed by {interaction.user.name}')
         else:
             await interaction.followup.send(embed=discord.Embed(title='❌ Canceled', description='Ticket closure cancelled.', timestamp=datetime.datetime.now(), color=discord.Color.red()).set_footer(text=f'Canceled by {view.interaction.user}', icon_url=view.interaction.user.avatar.url))
-    @app_commands.command(name='partner', description='Apply to partner with us!')
-    async def partner(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
-        await interaction.response.send_modal(view=PartnerModal())
+
     @app_commands.command(name='reload', description="Reload a cog")
     @commands.is_owner()
-    async def reload(self, interaction: discord.Interaction, cog: Literal["moderation", "general"]):
+    async def reload(self, interaction: discord.Interaction, cog: str):  
         await interaction.response.defer(ephemeral=True)
-        if cog == "moderation":
-            await self.bot.reload_extension("cogs.moderation")
-        elif cog == "general":
-            await self.bot.reload_extension("cogs.general")
+        await self.bot.reload_extension("cogs." + cog)
         await interaction.followup.send(embed=discord.Embed(title='Reloaded!', color=discord.Color.green()))
     @commands.Cog.listener()
     async def on_ready(self):
