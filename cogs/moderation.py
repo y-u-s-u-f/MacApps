@@ -62,6 +62,7 @@ class Moderation(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name='lock', description='Locks a thread')
+    @app_commands.describe(reason='The reason for locking the thread')
     async def lock(self, interaction, reason: str = None):
         await interaction.response.defer(ephemeral=True)
         if not isinstance(interaction.channel, discord.Thread):
