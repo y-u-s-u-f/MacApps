@@ -4,7 +4,7 @@ import re
 from discord.ext import commands
 from discord import app_commands
 from typing import Literal
-
+import re
 
 
 class Confirm(discord.ui.View):
@@ -32,6 +32,7 @@ class Confirm(discord.ui.View):
         self.interaction = interaction
         self.value = False
         self.stop()
+
 
 
 async def lock_thread(interaction: discord.Interaction, reason:str=None, followup:bool=True):
@@ -149,6 +150,67 @@ class Moderation(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         print('Moderation cog loaded')
+
+    @app_commands.command(name='purge', description='Purges messages')
+    @app_commands.describe(amount='The amount of messages to purge', user='The user to purge messages from', reason='The reason for purging messages')
+    @app_commands.default_permissions(manage_messages=True)
+    async def purge(self, interaction: discord.Interaction, amount: int, user: discord.Member = None, reason: str = None):
+        await interaction.response.defer(ephemeral=True)
+        if amount > 100:
+            await interaction.followup.send(embed=discord.Embed(title='❌ Error', description='You can only purge up to 100 messages at a time.', color=discord.Color.red()))
+            return
+        if user:
+            await interaction.channel.purge(limit=amount, check=lambda m: m.author == user, reason=reason)
+        else:
+            await interaction.channel.purge(limit=amount, reason=reason)
+        await interaction.followup.send(embed=discord.Embed(title='Purged!', description=f'Purged {amount} messages.', color=discord.Color.green()))
+
+    @app_commands.command(name='kick', description='Kicks a user')
+    @app_commands.describe(member='The user to kick', reason='The reason for kicking the user')
+    @app_commands.default_permissions(kick_members=True)
+    async def kick(self, interaction: discord.Interaction, member: discord.Member, reason: str = None):
+        await interaction.response.defer(ephemeral=True)
+        await member.send(embed=discord.Embed(title='Kicked!', description=f'You have been kicked from MacApps', color=discord.Color.red()))
+        await member.kick(reason=reason)
+        await interaction.followup.send(embed=discord.Embed(title='Kicked!', description=f'Kicked {member.mention}.', color=discord.Color.green()))
+
+    @app_commands.command(name='ban', description='Bans a user')
+    @app_commands.describe(member='The user to ban', reason='The reason for banning the user')
+    @app_commands.default_permissions(ban_members=True)
+    async def ban(self, interaction: discord.Interaction, member: discord.Member, reason: str = None):
+        await interaction.response.defer(ephemeral=True)
+        await member.send(embed=discord.Embed(title='Banned!', description=f'You have been banned from MacApps', color=discord.Color.red()))
+        await member.ban(reason=reason)
+        await interaction.followup.send(embed=discord.Embed(title='Banned!', description=f'Banned {member.mention}', color=discord.Color.green()))
+
+    @app_commands.command(name='mute', description='Timeouts a user')
+    @app_commands.default_permissions(moderate_members=True)
+    async def timeout(self, interaction: discord.Interaction, member: discord.Member, seconds: int = 0, minutes: int = 0, hours: int = 0, days: int = 0, reason: str = None):
+        duration = datetime.timedelta(seconds=seconds, minutes=minutes, hours= hours, days=days)
+        await member.timeout(duration, reason=reason)
+
+        await member.send(embed=discord.Embed(title='Timed out!', description=f'You have been timed out in MacApps for {duration}', color=discord.Color.red()))
+        await interaction.response.send_message(embed=discord.Embed(title='Timed out!', description=f'Timed out {member.mention} for {duration}', color=discord.Color.green()), ephemeral=True)
+
+    @app_commands.command(name='unmute', description='Unmutes a user')
+    @app_commands.default_permissions(moderate_members=True)
+    @app_commands.describe(member='The member to unmute')
+    async def unmute(self, interaction: discord.Interaction, member: discord.Member):
+        await member.unmute()
+        await interaction.response.send_message(embed=discord.Embed(title='Unmuted!', description=f'Unmuted {member.mention}', color=discord.Color.green()), ephemeral=True)
+        await member.send(embed=discord.Embed(title='Unmuted!', description=f'You have been unmuted in MacApps', color=discord.Color.green()))
+
+    @app_commands.command(name='warn', description='Warns a user')
+    @app_commands.default_permissions(moderate_members=True)
+    @app_commands.describe(member='The member to warn', reason='The reason for warning the member')
+    async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
+        await interaction.response.defer(ephemeral=True)
+        await member.send(embed=discord.Embed(title='Warned!', description=f'You have been warned in MacApps for reason: {reason}', color=discord.Color.red()))
+        await interaction.followup.send(embed=discord.Embed(title='Warned!', description=f'Warned {member.mention}', color=discord.Color.green()))
+
+    
+    
+
     
     
     
