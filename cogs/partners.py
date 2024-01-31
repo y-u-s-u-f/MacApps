@@ -49,6 +49,7 @@ class Partners(commands.Cog):
             threadList += f'{thread.mention}\n'
         await interaction.followup.send(embed=discord.Embed(title='Our Amazing Partners!', description=threadList ,color=discord.Color.green()))
     
+    
     @commands.Cog.listener()
     async def on_ready(self):
         print('Partners cog loaded')
