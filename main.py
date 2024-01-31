@@ -4,7 +4,7 @@ import os
 from discord.ext import commands
 from dotenv import load_dotenv
 import cogs
-from typing import Literal
+
 
 load_dotenv()
 
