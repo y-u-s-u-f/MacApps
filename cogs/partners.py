@@ -30,10 +30,35 @@ class PartnerModal(discord.ui.Modal, title='Partner with us!'):
         embed=discord.Embed(title='Your application has been submitted!', description=f'We will contact you in {channel.mention}', color=discord.Color.green())
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
+
+
+class partnerPingModal(discord.ui.Modal, title='Send a message with @partner pings'):
+    def __init__(self, channel_id=None):
+        super().__init__()
+        self.channel_id = channel_id
+
+    message = discord.ui.TextInput(label='Message', placeholder='The message to send (with {ping} where you want to ping)', style=discord.TextStyle.long, required=True)
+    notes = discord.ui.TextInput(label='Notes', placeholder='Any additional information you would like to provide (only mods can see this).', style=discord.TextStyle.long, required=False)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        embed=discord.Embed(title='Partner Ping request!', description=f'{interaction.user.mention} has requested a partner ping!', timestamp=datetime.datetime.now(), color=discord.Color.green())
+        embed.set_footer(text=f'Submitted by {interaction.user.name}', icon_url=interaction.user.avatar.url)
+        embed.add_field(name='Message', value=self.message.value.replace("{ping}", "<@1188175604655325314>"), inline=False)
+        embed.add_field(name='Notes', value=self.notes.value, inline=False) if self.notes.value else None
+        embed.add_field(name='Channel', value=f'<#{self.channel_id}>', inline=False)
+
+        channel = interaction.guild.get_channel(1188249838656159744)
+        await channel.send(embed=embed, view=partnerPingView())
+
 class Partners(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+    @app_commands.command(name='partnerping', description='Request a partner ping!')
+    @app_commands.describe(channel='The channel to send the ping in')
+    async def partnerping(self, interaction: discord.Interaction, channel: discord.TextChannel):
+        await interaction.response.defer(ephemeral=True)
+        await interaction.response.send_modal(view=partnerPingModal(channel_id=channel.id))
 
     @app_commands.command(name='partner', description='Apply to partner with us!')
     async def partner(self, interaction: discord.Interaction):
@@ -48,6 +73,9 @@ class Partners(commands.Cog):
         for thread in forum.threads:
             threadList += f'{thread.mention}\n'
         await interaction.followup.send(embed=discord.Embed(title='Our Amazing Partners!', description=threadList ,color=discord.Color.green()))
+
+
+
     
     
     @commands.Cog.listener()
