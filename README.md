@@ -1,11 +1,7 @@
 # MacApps bot
- Discord.py bot for MacApps server
+ Discord.py bot for [MacApps server](https://discord.gg/HMG94z9V7K)
  We are still in our early stages of development, so please be patient with us.
  We are always looking for new ways to improve the bot, so if you have any suggestions, please let us know.
 
-
-### Todo List:
-- [ ] Add alternative to command
-- [ ] Add app sales command
-- [ ] Add modmail functionality
-- [x] Add partner command
+ # Contribution
+ Contribution is always welcome!
