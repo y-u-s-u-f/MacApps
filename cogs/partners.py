@@ -6,7 +6,7 @@ from discord import app_commands
 
 class PartnerModal(discord.ui.Modal, title='Partner with us!'):
     app_name = discord.ui.TextInput(label='App Name(s)', placeholder='Your app name(s)', style=discord.TextStyle.short, required=True)
-    app_desc = discord.ui.TextInput(label='Long App Description(s)', placeholder='Your app description(s)', style=discord.TextStyle.long, required=False)
+    app_desc = discord.ui.TextInput(label='Long App Description(s)', placeholder='Your app description(s) - 1 paragraph each.', style=discord.TextStyle.long, required=False)
     app_link = discord.ui.TextInput(label='App Link(s)', placeholder='Your app link(s)', required=True)
     notes = discord.ui.TextInput(label='Notes', placeholder='Any additional information you would like to provide', style=discord.TextStyle.long, required=False)
 
@@ -59,7 +59,7 @@ class Partners(commands.Cog):
 
     @app_commands.command(name='partner', description='Apply to partner with us!')
     async def partner(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(view=PartnerModal())
+        await interaction.response.send_modal(PartnerModal())
     
     @app_commands.command(name='partners', description='Shows a list of our partners')
     async def partners(self, interaction: discord.Interaction):
