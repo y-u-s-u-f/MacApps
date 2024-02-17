@@ -12,7 +12,7 @@ class PartnerModal(discord.ui.Modal, title='Partner with us!'):
 
     async def on_submit(self, interaction: discord.Interaction):
         embed=discord.Embed(title='New Partner Application!', description=f'{interaction.user.mention} has submitted an application!\n\n### Description:\n\n'+self.app_desc.value, timestamp=datetime.datetime.now(), color=discord.Color.green())
-        embed.set_footer(text=f'Submitted by {interaction.user.name}', icon_url=interaction.user.avatar.url)
+        embed.set_footer(text=f'Submitted by {interaction.user.name}', icon_url=interaction.user.display_avatar.url)
         embed.add_field(name='App Name(s)', value=self.app_name.value, inline=False)
         embed.add_field(name='App Link(s)', value=self.app_link.value, inline=False)
         embed.add_field(name='Notes', value=self.notes.value, inline=False) if self.notes.value else None
@@ -38,9 +38,8 @@ class partnerPingModal(discord.ui.Modal, title='Send a message with @partner pin
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.send_message(embed=discord.Embed(title='Your request has been submitted!', description='The mods will review it soon.', color=discord.Color.green()), ephemeral=True)
-        embed=discord.Embed(title='Partner Ping request!', description=f'{interaction.user.mention} has requested a partner ping!', timestamp=datetime.datetime.now(), color=discord.Color.green())
-        embed.set_footer(text=f'Submitted by {interaction.user.name}', icon_url=interaction.user.avatar.url)
-        embed.add_field(name='Message', value="```\n"+self.message.value+"\n```", inline=False)
+        embed=discord.Embed(title='Partner Ping request!', description=f'{interaction.user.mention} has requested a partner ping!' + "\n```\n"+self.message.value+"\n```", timestamp=datetime.datetime.now(), color=discord.Color.green())
+        embed.set_footer(text=f'Submitted by {interaction.user.name}',  icon_url=interaction.user.display_avatar.url)
         embed.add_field(name='Notes', value=self.notes.value, inline=False) if self.notes.value else None
 
 
