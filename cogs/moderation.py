@@ -37,7 +37,7 @@ class Confirm(discord.ui.View):
 
 async def lock_thread(interaction: discord.Interaction, reason:str=None, followup:bool=True):
     em = discord.Embed(title="🔒 Locked!", description=f"Reason: {reason}" if reason else None, timestamp=datetime.datetime.now(), color=discord.Color.green())
-    em.set_footer(text=f'Locked by {interaction.user.name}', icon_url=interaction.user.avatar.url)
+    em.set_footer(text=f'Locked by {interaction.user.name}', icon_url=interaction.user.display_avatar.url)
     await interaction.followup.send(embed=discord.Embed(title="Locking...", color=discord.Color.green()), ephemeral=True) if followup else await interaction.response.send_message(embed=discord.Embed(title="Locking...", color=discord.Color.green()), ephemeral=True)
     await interaction.channel.send(embed=em)
     await interaction.channel.edit(name=
@@ -55,7 +55,7 @@ async def unlock_thread(interaction: discord.Interaction, thread: discord.Thread
         timestamp=datetime.datetime.now(),
         color=discord.Color.green()
     )
-    embed.set_footer(text=f"Unlocked by {interaction.user.name}", icon_url=interaction.user.avatar.url)
+    embed.set_footer(text=f"Unlocked by {interaction.user.name}", icon_url=interaction.user.display_avatar.url)
     await thread.send(embed=embed)
 
 class Moderation(commands.Cog):
@@ -76,7 +76,7 @@ class Moderation(commands.Cog):
         if interaction.user == interaction.channel.owner or interaction.permissions.manage_threads:
             await lock_thread(interaction, reason)
         else:
-            await interaction.channel.send(f'<@{interaction.channel.owner_id}>',embed=discord.Embed(title='Do you want to lock this thread?', color=discord.Color.green()).set_footer(text=f'{interaction.user.name} is requesting to lock this thread.', icon_url=interaction.user.avatar.url), view=view)
+            await interaction.channel.send(f'<@{interaction.channel.owner_id}>',embed=discord.Embed(title='Do you want to lock this thread?', color=discord.Color.green()).set_footer(text=f'{interaction.user.name} is requesting to lock this thread.', icon_url=interaction.user.display_avatar.url), view=view)
 
             await view.wait()
             if view.value:
@@ -109,15 +109,15 @@ class Moderation(commands.Cog):
 
     @app_commands.command(name='ticket', description='Creates a ticket to get help from the staff team')
     async def ticket(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=False)
+        await interaction.response.defer(ephemeral=True)
         category = interaction.guild.get_channel(1188453953088786453)
         channel = await category.create_text_channel(name=f'{interaction.user.name}-ticket', topic=f'Ticket for {interaction.user.name}')
         overwrite = channel.overwrites_for(interaction.user)
         overwrite.update(send_messages=True, view_channel=True, read_message_history=True, read_messages=True)
         await channel.set_permissions(interaction.user, overwrite=overwrite)
-        await channel.send(f'<@&1188453953088786451>', embed=discord.Embed(title='New Ticket!', description=f'{interaction.user.mention} has created a ticket!', timestamp=datetime.datetime.now(), color=discord.Color.green()).set_footer(text=f'Created by {interaction.user.name}', icon_url=interaction.user.avatar.url))
+        await channel.send(embed=discord.Embed(title='New Ticket!', description=f'{interaction.user.mention} has created a ticket!', timestamp=datetime.datetime.now(), color=discord.Color.green()).set_footer(text=f'Created by {interaction.user.name}', icon_url=interaction.user.display_avatar.url))
         await interaction.followup.send(embed=discord.Embed(title='Ticket created!', description=f'Please go to {channel.mention} to see your ticket!', color=discord.Color.green()))
-    # sync command
+
     @app_commands.command(name='sync', description='Syncs the slash commands with the bot')
     @commands.is_owner()
     async def sync(self, interaction: discord.Interaction):
@@ -137,9 +137,13 @@ class Moderation(commands.Cog):
         await view.wait()
 
         if view.value:
-            await interaction.channel.delete(reason=f'Closed by {interaction.user.name}')
+            await interaction.channel.edit(name=f'closed-ticket')
+            for member in interaction.channel.members:
+                if member.guild_permissions.administrator:
+                    continue
+                await interaction.channel.set_permissions(member, overwrite=None)
         else:
-            await interaction.followup.send(embed=discord.Embed(title='❌ Canceled', description='Ticket closure cancelled.', timestamp=datetime.datetime.now(), color=discord.Color.red()).set_footer(text=f'Canceled by {view.interaction.user}', icon_url=view.interaction.user.avatar.url))
+            await interaction.followup.send(embed=discord.Embed(title='❌ Canceled', description='Ticket closure cancelled.', timestamp=datetime.datetime.now(), color=discord.Color.red()).set_footer(text=f'Canceled by {view.interaction.user}', icon_url=view.interaction.user.display_avatar.url))
 
     @app_commands.command(name='reload', description="Reload a cog")
     @commands.is_owner()
