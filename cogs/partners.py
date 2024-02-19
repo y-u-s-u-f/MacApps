@@ -69,7 +69,6 @@ class Partners(commands.Cog):
         await interaction.followup.send(embed=discord.Embed(title='Our Amazing Partners!', description=threadList ,color=discord.Color.green()))
 
 
-
     
     
     @commands.Cog.listener()
