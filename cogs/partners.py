@@ -18,7 +18,7 @@ class PartnerModal(discord.ui.Modal, title='Partner with us!'):
         embed.add_field(name='Notes', value=self.notes.value, inline=False) if self.notes.value else None
         # Create a channel for that partner submission:
         category = interaction.guild.get_channel(1188453953088786453)
-        channel = await category.create_text_channel(name=f'{interaction.user.name}-partner-application', topic=f'Partner application for {interaction.user.name}')
+        channel = await category.create_text_channel(name=f'{interaction.user.name}-pa', topic=f'Partner application for {interaction.user.name}')
         overwrite = channel.overwrites_for(interaction.user)
         overwrite.update(send_messages=True, view_channel=True, read_message_history=True, read_messages=True)
         await channel.set_permissions(interaction.user, overwrite=overwrite)
