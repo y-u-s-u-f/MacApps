@@ -25,6 +25,19 @@ class General(commands.Cog):
         embed.set_footer(text="Made with love by @yusuf.md")
         await interaction.response.send_message(embed=embed)
 
+    @app_commands.command(name='help', description="Provides a list of all commands and their descriptions")
+    async def help(self, interaction: discord.Interaction):
+        embed = discord.Embed(title="Help", color=discord.Color.blue())
+
+        excluded_commands = ['sync', 'reload', 'purge', 'kick', 'ban', 'mute', 'unmute', 'warn']
+
+        for cog in self.bot.cogs.values():
+            for command in cog.get_app_commands():
+                if command.name not in excluded_commands:
+                    embed.add_field(name=command.name, value=command.description, inline=True)
+        
+        await interaction.response.send_message(embed=embed)
+
     def get_uptime(self):
         since = self.bot.start_time
         now = datetime.datetime.now()
