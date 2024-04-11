@@ -200,7 +200,7 @@ class Moderation(commands.Cog):
     @app_commands.default_permissions(moderate_members=True)
     @app_commands.describe(member='The member to unmute')
     async def unmute(self, interaction: discord.Interaction, member: discord.Member):
-        await member.unmute()
+        await member.timeout(None)
         await interaction.response.send_message(embed=discord.Embed(title='Unmuted!', description=f'Unmuted {member.mention}', color=discord.Color.green()), ephemeral=True)
         await member.send(embed=discord.Embed(title='Unmuted!', description=f'You have been unmuted in MacApps', color=discord.Color.green()))
 
