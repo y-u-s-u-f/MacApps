@@ -5,6 +5,16 @@ from discord.ext import commands
 from discord import app_commands
 from typing import Literal
 import re
+# mongodb imports for warns
+import os
+import pymongo
+from pymongo import MongoClient
+
+cluster = MongoClient(os.getenv('MONGODB_URL'))
+# databse: MacApps
+# collection: warns
+db = cluster['MacApps']
+collection = db['warns']
 
 
 class Confirm(discord.ui.View):
@@ -209,10 +219,55 @@ class Moderation(commands.Cog):
     @app_commands.describe(member='The member to warn', reason='The reason for warning the member')
     async def warn(self, interaction: discord.Interaction, member: discord.Member, reason: str):
         await interaction.response.defer(ephemeral=True)
+        collection.insert_one({
+            'warn_id': collection.count_documents({}) + 1,
+            'user': {
+                'id': member.id,
+                'name': member.name,
+                'reason': reason,
+                'moderator': interaction.user.id
+            }
+        })
         await member.send(embed=discord.Embed(title='Warned!', description=f'You have been warned in MacApps for reason: {reason}', color=discord.Color.red()))
-        await interaction.followup.send(embed=discord.Embed(title='Warned!', description=f'Warned {member.mention}', color=discord.Color.green()))
+        await interaction.followup.send(embed=discord.Embed(title='Warned!', description=f'Warned {member.mention} for reason: {reason}', color=discord.Color.green()).set_footer(text=f'Warn ID: {collection.count_documents({})}', icon_url=member.display_avatar.url))
+
+    @app_commands.command(name='warns', description='Shows the warnings of a user')
+    @app_commands.describe(member='The member to show the warnings of')
+    @app_commands.default_permissions(moderate_members=True)
+    async def warns(self, interaction: discord.Interaction, member: discord.Member):
+        await interaction.response.defer(ephemeral=True)
+        warns = collection.find({'user.id': member.id})
+        embed = discord.Embed(title=f'Warnings for {member.name}', color=discord.Color.green())
+        for warn in warns:
+            user = warn['user']
+            warn_id = warn.get('warn_id', '')
+            reason = user.get('reason', '')
+            moderator = user.get('moderator', '')
+            embed.add_field(name=f'Warn ID: {warn_id}', value=f'Reason: {reason}\nModerator: <@{moderator}>', inline=False)
+        await interaction.followup.send(embed=embed)
+
+    @app_commands.command(name='unwarn', description='Deletes a warning')
+    @app_commands.describe(warn_id='The ID of the warning to delete')
+    @app_commands.default_permissions(moderate_members=True)
+    async def unwarn(self, interaction: discord.Interaction, warn_id: int):
+        await interaction.response.defer(ephemeral=True)
+        warn = collection.find_one({'warn_id': warn_id})
+        if not warn:
+            await interaction.followup.send(embed=discord.Embed(title='❌ Error', description='No such warning found.', color=discord.Color.red()))
+            return
+        collection.delete_one({'warn_id': warn_id})
+        await interaction.followup.send(embed=discord.Embed(title='Unwarned!', description=f'Unwarned {warn["user"]["name"]} for warn ID: {warn_id}', color=discord.Color.green()))
+
+    @app_commands.command(name='clearwarns', description='Clears all warnings of a user')
+    @app_commands.default_permissions(moderate_members=True)
+    @app_commands.describe(member='The member to clear the warnings of')
+    async def clearwarns(self, interaction: discord.Interaction, member: discord.Member):
+        await interaction.response.defer(ephemeral=True)
+        collection.delete_many({'user.id': member.id})
+        await interaction.followup.send(embed=discord.Embed(title='Cleared!', description=f'Cleared all warnings of {member.mention}', color=discord.Color.green()))
 
     
+
     
 
 async def setup(bot):
